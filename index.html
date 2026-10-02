@@ -2,6 +2,7 @@
 <html lang="bn">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stock Finder — Distribution Hub</title>
 <style>
@@ -314,6 +315,7 @@
       <input type="file" id="fileInput" accept=".xlsx,.xls">
       <label for="priceFileInput">নতুন প্রাইস ফাইল আপলোড</label>
       <input type="file" id="priceFileInput" accept=".xlsx,.xls">
+      <button type="button" id="refreshBtn">রিফ্রেশ (নতুন ডাটা)</button>
       <button type="button" id="exportBtn">ডাটা এক্সপোর্ট (data.json)</button>
       <button type="button" id="clearDataBtn" class="danger-link">সব ডাটা মুছে ফেলুন</button>
     </div>
@@ -849,7 +851,7 @@ let ENC = null;
 const pwInput=document.getElementById('pwInput'), pwMsg=document.getElementById('pwMsg'), lockEl=document.getElementById('lock');
 async function tryUnlock(pw, silent){
   try{
-    if(!ENC){ const r=await fetch('data.json?'+Date.now()); ENC=await r.json(); }
+    if(!ENC){ const r=await fetch('data.json?'+Date.now(),{cache:'no-store'}); ENC=await r.json(); }
     PRODUCTS = await decryptData(ENC, pw);
     CUR_PW = pw;
     try{ localStorage.setItem('sf_pw', pw); }catch(e){}
@@ -873,6 +875,25 @@ document.getElementById('exportBtn').addEventListener('click', async ()=>{
   a.href=URL.createObjectURL(new Blob([JSON.stringify(obj)],{type:'application/json'}));
   a.download='data.json'; a.click();
 });
+async function refreshData(manual){
+  if(!CUR_PW) return;
+  try{
+    const r=await fetch('data.json?'+Date.now(),{cache:'no-store'});
+    const enc=await r.json();
+    const data=await decryptData(enc, CUR_PW);
+    ENC=enc; PRODUCTS=data;
+    updateDbLabel(); render(searchInput.value);
+    if(manual) alert('নতুন ডাটা লোড হয়েছে');
+  }catch(e){
+    if(e && e.name==='OperationError'){
+      try{localStorage.removeItem('sf_pw');}catch(_){}
+      CUR_PW=''; ENC=null; lockEl.style.display='flex';
+      pwMsg.textContent='পাসওয়ার্ড বদলেছে, নতুন পাসওয়ার্ড দিন';
+    } else if(manual){ alert('রিফ্রেশ হয়নি, ইন্টারনেট চেক করুন'); }
+  }
+}
+document.getElementById('refreshBtn').addEventListener('click', ()=> refreshData(true));
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshData(false); });
 </script>
 </body>
 </html>
