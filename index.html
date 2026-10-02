@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Finder — Distribution Hub</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg: #171225;
+    --surface: #201A34;
+    --surface-2: #2A2244;
+    --line: #3A3159;
+    --text: #F1EEFB;
+    --muted: #A79EC9;
+    --muted-2: #6E6494;
+    --accent: #FF8A3D;
+    --accent-2: #FF4FA3;
+    --accent-3: #38D9C9;
+    --accent-4: #6C8BFF;
+    --accent-dim: #4A2E2A;
+    --ok: #3EE58C;
+    --ok-dim: #163A2C;
+    --warn: #FFC93D;
+    --warn-dim: #3E3216;
+    --danger: #FF5C7A;
+    --danger-dim: #3E1E2C;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Manrope', sans-serif;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:
+      radial-gradient(circle at 8% 0%, rgba(255,138,61,0.14), transparent 42%),
+      radial-gradient(circle at 95% 12%, rgba(108,139,255,0.14), transparent 40%),
+      radial-gradient(circle at 50% 100%, rgba(56,217,201,0.10), transparent 45%),
+      var(--bg);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap{
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 28px 20px 80px;
+  }
+
+  .masthead{
+    display:flex;
+    align-items:baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+  }
+  .masthead h1{
+    font-size: 22px;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.01em;
+    background: linear-gradient(100deg, var(--accent) 0%, var(--accent-2) 55%, var(--accent-4) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .masthead .sub{
+    font-size: 12.5px;
+    color: var(--muted-2);
+    font-family: var(--mono);
+  }
+
+  .search-box{
+    position: relative;
+    margin-bottom: 6px;
+    border-radius: 13px;
+    padding: 2px;
+    background: linear-gradient(120deg, var(--accent), var(--accent-2), var(--accent-4));
+  }
+  .search-box input{
+    width: 100%;
+    background: var(--surface);
+    border: none;
+    border-radius: 11px;
+    color: var(--text);
+    font-size: 17px;
+    font-family: var(--sans);
+    font-weight: 600;
+    padding: 15px 16px 15px 44px;
+    outline: none;
+    display: block;
+  }
+  .search-box input::placeholder{ color: var(--muted-2); font-weight: 500; }
+  .search-box svg{
+    position:absolute; left:16px; top:50%; transform:translateY(-50%);
+    width:18px; height:18px; stroke: var(--accent-2); pointer-events:none;
+    z-index: 1;
+  }
+
+  .meta-row{
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    font-size: 12.5px;
+    color: var(--muted-2);
+    font-family: var(--mono);
+    margin: 10px 2px 20px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .meta-row .file-actions{ display:flex; gap: 16px; align-items:center; flex-wrap: wrap; }
+  .meta-row button, .meta-row label{
+    color: var(--muted);
+    background: none;
+    border: none;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding: 0;
+  }
+  .meta-row button:hover, .meta-row label:hover{ color: var(--accent-2); }
+  .meta-row button.danger-link{ font-family: var(--mono); }
+  .meta-row button.danger-link:hover{ color: var(--danger); }
+  #fileInput, #priceFileInput{ display:none; }
+
+  .results{ display:flex; flex-direction:column; gap: 10px; }
+
+  .empty-state{
+    text-align:center;
+    padding: 70px 20px;
+    color: var(--muted-2);
+  }
+  .empty-state .big{
+    font-size: 15px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .empty-state .small{ font-size: 13px; font-family: var(--mono); }
+
+  .card{
+    background: linear-gradient(155deg, var(--surface) 0%, var(--surface) 70%, var(--surface-2) 100%);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+    transition: border-color .12s ease, transform .12s ease;
+  }
+  .card:hover{ border-color: var(--accent-4); transform: translateY(-1px); }
+
+  .card-top{
+    display:flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .card-name{
+    font-size: 14.5px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--text);
+  }
+  .card-name mark{
+    background: linear-gradient(100deg, var(--accent), var(--accent-2));
+    color: #1A1225;
+    border-radius: 4px;
+    padding: 0 3px;
+    font-weight: 700;
+  }
+  .card-tags{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 8px;
+    font-family: var(--mono);
+  }
+  .card-tags span{
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 600;
+  }
+
+  .pill-col{
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  .qty-pill{
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 7px;
+    white-space: nowrap;
+  }
+  .qty-in{ background: linear-gradient(100deg, #163A2C, #1D4A38); color: var(--ok); border: 1px solid #245A42; }
+  .qty-out{ background: var(--danger-dim); color: var(--danger); border: 1px solid #5A2B3A; }
+  .qty-na{ background: var(--surface-2); color: var(--muted-2); border: 1px solid var(--line); }
+
+  .price-block{
+    text-align: right;
+    font-family: var(--mono);
+  }
+  .price-dp{
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--warn);
+    white-space: nowrap;
+  }
+  .price-mrp{
+    font-size: 11px;
+    color: var(--muted-2);
+    text-decoration: line-through;
+    white-space: nowrap;
+  }
+  .status-badge{
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .status-available{ background: var(--ok-dim); color: var(--ok); }
+  .status-limited{ background: var(--warn-dim); color: var(--warn); }
+  .status-out{ background: var(--danger-dim); color: var(--danger); }
+  .status-unknown{ background: var(--surface-2); color: var(--muted-2); }
+
+  .breakdown{
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px 8px;
+  }
+  .breakdown .wh{
+    display:flex;
+    align-items: baseline;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 4px 9px;
+  }
+  .breakdown .wh.zero{ opacity: 0.45; }
+  .breakdown .wh-name{ color: var(--muted); }
+  .breakdown .wh-qty{ color: var(--ok); font-weight: 700; }
+  .breakdown .wh-qty.zero{ color: var(--muted-2); font-weight: 500; }
+  .breakdown .no-warehouse-data{
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--muted-2);
+    font-style: italic;
+  }
+
+  .count-badge{
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted-2);
+    margin-bottom: 12px;
+  }
+
+  @media (max-width: 480px){
+    .wrap{ padding: 20px 14px 60px; }
+    .masthead h1{ font-size: 18px; }
+    .breakdown .wh{ font-size: 11.5px; padding: 3px 7px; }
+    .card-top{ flex-direction: column; }
+    .pill-col{ align-items: flex-start; flex-direction: row; gap: 10px; }
+    .price-block{ text-align: left; }
+  }
+</style>
+</head>
+<body>
+<div id="lock" style="position:fixed;inset:0;background:#171225;z-index:99;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="text-align:center;max-width:320px;width:100%">
+    <h1 style="font-size:22px;margin:0 0 14px;color:#F1EEFB">Stock Finder</h1>
+    <input type="password" id="pwInput" placeholder="পাসওয়ার্ড দিন" style="width:100%;padding:14px;border-radius:10px;border:1px solid #3A3159;background:#201A34;color:#F1EEFB;font-size:16px">
+    <button id="pwBtn" style="margin-top:10px;width:100%;padding:13px;border:none;border-radius:10px;background:#FF8A3D;color:#1A1225;font-weight:700;font-size:15px;cursor:pointer">খুলুন</button>
+    <div id="pwMsg" style="margin-top:10px;font-size:13px;color:#FF5C7A;min-height:18px"></div>
+  </div>
+</div>
+<div class="wrap">
+
+  <div class="masthead">
+    <h1>Stock Finder</h1>
+    <div class="sub" id="dbLabel">— SKU লোড করা আছে</div>
+  </div>
+
+  <div class="search-box">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+    <input type="text" id="searchInput" placeholder="প্রোডাক্টের নাম লিখে সার্চ করুন..." autocomplete="off">
+  </div>
+
+  <div class="meta-row">
+    <span id="resultInfo"></span>
+    <div class="file-actions">
+      <label for="fileInput">নতুন স্টক ফাইল আপলোড</label>
+      <input type="file" id="fileInput" accept=".xlsx,.xls">
+      <label for="priceFileInput">নতুন প্রাইস ফাইল আপলোড</label>
+      <input type="file" id="priceFileInput" accept=".xlsx,.xls">
+      <button type="button" id="exportBtn">ডাটা এক্সপোর্ট (data.json)</button>
+      <button type="button" id="clearDataBtn" class="danger-link">সব ডাটা মুছে ফেলুন</button>
+    </div>
+  </div>
+
+  <div class="count-badge" id="countBadge"></div>
+  <div class="results" id="results"></div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+let PRODUCTS = [];
+let CUR_PW = '';
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const u8b64=u=>{let s='';u.forEach(c=>s+=String.fromCharCode(c));return btoa(s)};
+async function keyFrom(pw,salt){const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:200000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);}
+async function decryptData(o,pw){const k=await keyFrom(pw,b64(o.salt));const buf=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(o.iv)},k,b64(o.data));return JSON.parse(new TextDecoder().decode(buf));}
+async function encryptData(arr,pw){const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));const k=await keyFrom(pw,salt);const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(JSON.stringify(arr))));return {salt:u8b64(salt),iv:u8b64(iv),data:u8b64(ct)};}
+
+const searchInput = document.getElementById('searchInput');
+const resultsEl = document.getElementById('results');
+const resultInfo = document.getElementById('resultInfo');
+const countBadge = document.getElementById('countBadge');
+const dbLabel = document.getElementById('dbLabel');
+const fileInput = document.getElementById('fileInput');
+const priceFileInput = document.getElementById('priceFileInput');
+const clearDataBtn = document.getElementById('clearDataBtn');
+
+function updateDbLabel(){
+  const withStock = PRODUCTS.filter(p => p.total !== null && p.total !== undefined).length;
+  const withPrice = PRODUCTS.filter(p => p.dp !== null && p.dp !== undefined).length;
+  dbLabel.textContent = `${PRODUCTS.length} প্রোডাক্ট (স্টক ডেটা: ${withStock}, প্রাইস ডেটা: ${withPrice})`;
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function highlight(text, q){
+  if(!q) return escapeHtml(text);
+  const idx = text.toLowerCase().indexOf(q.toLowerCase());
+  if(idx === -1) return escapeHtml(text);
+  return escapeHtml(text.slice(0,idx)) + '<mark>' + escapeHtml(text.slice(idx, idx+q.length)) + '</mark>' + escapeHtml(text.slice(idx+q.length));
+}
+
+function hueFor(str){
+  let h = 0;
+  for(let i=0; i<str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return h % 360;
+}
+function tagStyle(str){
+  const hue = hueFor(str);
+  return `background:hsla(${hue},75%,60%,0.16); color:hsl(${hue},85%,72%); border:1px solid hsla(${hue},75%,60%,0.35);`;
+}
+function whStyle(str){
+  const hue = hueFor(str);
+  return `border-color:hsla(${hue},70%,60%,0.4);`;
+}
+function whQtyStyle(str){
+  const hue = hueFor(str);
+  return `color:hsl(${hue},85%,68%);`;
+}
+
+function fmtPrice(n){
+  return n.toLocaleString('en-IN');
+}
+
+function statusClass(status){
+  if(!status) return 'status-unknown';
+  const s = status.toLowerCase();
+  if(s.includes('out of stock') || s.includes('out') ) return 'status-out';
+  if(s.includes('very limited') || s.includes('limited')) return 'status-limited';
+  if(s.includes('available') || s.includes('in stock')) return 'status-available';
+  return 'status-unknown';
+}
+
+function render(query){
+  const q = query.trim().toLowerCase();
+  let matches;
+  if(!q){
+    matches = [];
+  } else {
+    matches = PRODUCTS.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      (p.brand && p.brand.toLowerCase().includes(q)) ||
+      (p.group && p.group.toLowerCase().includes(q)) ||
+      (p.category && p.category.toLowerCase().includes(q))
+    );
+    matches.sort((a,b) => {
+      const aStarts = a.name.toLowerCase().startsWith(q) ? 0 : 1;
+      const bStarts = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+      if(aStarts !== bStarts) return aStarts - bStarts;
+      return a.name.length - b.name.length;
+    });
+  }
+
+  if(!q){
+    resultsEl.innerHTML = `<div class="empty-state">
+      <div class="big">প্রোডাক্টের নাম, ব্র্যান্ড বা ক্যাটাগরি লিখুন</div>
+      <div class="small">${PRODUCTS.length} টি প্রোডাক্ট সার্চের জন্য রেডি</div>
+    </div>`;
+    resultInfo.textContent = '';
+    countBadge.textContent = '';
+    return;
+  }
+
+  if(matches.length === 0){
+    resultsEl.innerHTML = `<div class="empty-state">
+      <div class="big">কোনো প্রোডাক্ট পাওয়া যায়নি</div>
+      <div class="small">"${escapeHtml(query)}" এর সাথে মিলছে না</div>
+    </div>`;
+    countBadge.textContent = '';
+    return;
+  }
+
+  const shown = matches.slice(0, 200);
+  countBadge.textContent = `${matches.length} টি রেজাল্ট` + (matches.length > 200 ? ' (প্রথম ২০০টি দেখানো হচ্ছে)' : '');
+
+  resultsEl.innerHTML = shown.map((p) => {
+    const whEntries = Object.entries(p.warehouses || {})
+      .sort((a,b) => b[1] - a[1]);
+    const whHtml = whEntries.length ? whEntries.map(([name, qty]) => `
+      <div class="wh ${qty === 0 ? 'zero' : ''}" style="${qty > 0 ? whStyle(name) : ''}">
+        <span class="wh-name">${escapeHtml(name)}</span>
+        <span class="wh-qty ${qty === 0 ? 'zero' : ''}" style="${qty > 0 ? whQtyStyle(name) : ''}">${qty}</span>
+      </div>
+    `).join('') : `<span class="no-warehouse-data">ব্রাঞ্চ-ওয়াইজ স্টক ডেটা নেই — শুধু প্রাইস লিস্টে আছে</span>`;
+
+    const tagParts = [];
+    if(p.brand) tagParts.push(`<span style="${tagStyle(p.brand)}">${escapeHtml(p.brand)}</span>`);
+    if(p.category) tagParts.push(`<span style="${tagStyle(p.category)}">${escapeHtml(p.category)}</span>`);
+    if(p.group) tagParts.push(`<span style="${tagStyle(p.group)}">${escapeHtml(p.group)}</span>`);
+
+    const hasStock = p.total !== null && p.total !== undefined;
+    const hasPrice = p.dp !== null && p.dp !== undefined;
+
+    let qtyHtml = '';
+    if(hasStock){
+      qtyHtml = `<div class="qty-pill ${p.total > 0 ? 'qty-in' : 'qty-out'}">${p.total > 0 ? p.total + ' পিস' : 'স্টক নেই'}</div>`;
+    } else if(p.status){
+      qtyHtml = `<div class="qty-pill qty-na">${escapeHtml(p.status)}</div>`;
+    }
+
+    let priceHtml = '';
+    if(hasPrice){
+      priceHtml = `<div class="price-block">
+        <div class="price-dp">৳${fmtPrice(p.dp)}</div>
+        ${p.mrp ? `<div class="price-mrp">৳${fmtPrice(p.mrp)}</div>` : ''}
+        ${p.status && hasStock ? `<div class="status-badge ${statusClass(p.status)}">${escapeHtml(p.status)}</div>` : ''}
+      </div>`;
+    }
+
+    return `<div class="card">
+      <div class="card-top">
+        <div>
+          <div class="card-name">${highlight(p.name, query)}</div>
+          <div class="card-tags">${tagParts.join('')}</div>
+        </div>
+        <div class="pill-col">
+          ${qtyHtml}
+          ${priceHtml}
+        </div>
+      </div>
+      <div class="breakdown">${whHtml}</div>
+    </div>`;
+  }).join('');
+}
+
+searchInput.addEventListener('input', e => render(e.target.value));
+updateDbLabel();
+render('');
+
+// ---- Stock ERP re-upload & re-parse (per-warehouse quantities) ----
+function parseStockWorkbook(wb){
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null, raw: true });
+
+  const products = [];
+  let curGroup = null, curCat = null, curBrand = null;
+  let warehouses = [];
+  let reading = false;
+
+  for(const r of rows){
+    const a = r[0], b = r[1];
+    if(typeof a === 'string' && b === ':'){
+      const label = a.trim();
+      const val = r[2];
+      if(label === 'Group Name') curGroup = val;
+      else if(label === 'Category Name') curCat = val;
+      else if(label === 'Brand Name') curBrand = val;
+      reading = false;
+      continue;
+    }
+    if(b === 'Total'){
+      warehouses = [];
+      let c = 2;
+      while(c < r.length && r[c] !== null && r[c] !== undefined){
+        warehouses.push(r[c]);
+        c++;
+      }
+      reading = true;
+      continue;
+    }
+    if(reading){
+      if(a === null || a === undefined || typeof a !== 'string'){
+        reading = false;
+        continue;
+      }
+      const whvals = {};
+      warehouses.forEach((wh, idx) => {
+        const v = r[2+idx];
+        whvals[wh] = (typeof v === 'number') ? v : 0;
+      });
+      products.push({
+        name: a,
+        total: (typeof b === 'number') ? b : 0,
+        group: curGroup, category: curCat, brand: curBrand,
+        warehouses: whvals,
+        dp: null, mrp: null, web: null, warranty: null, status: null, priceBrand: null
+      });
+    }
+  }
+  return products;
+}
+
+// ---- Price/DP list re-upload & re-parse (multi-sheet, heterogeneous headers) ----
+function normHeader(v){
+  return (v === null || v === undefined) ? '' : String(v).trim().toLowerCase();
+}
+function isNum(v){ return typeof v === 'number'; }
+
+function classifyHeader(cells){
+  const colmap = {};
+  cells.forEach((c, idx) => {
+    const h = normHeader(c);
+    if(!h) return;
+    if(colmap.name === undefined && (h === 'product name' || h.startsWith('product name'))){
+      colmap.name = idx;
+    } else if(colmap.desc === undefined && h.includes('description')){
+      colmap.desc = idx;
+    } else if(colmap.desc === undefined && h.includes('product head')){
+      colmap.desc = idx;
+    } else if(colmap.desc === undefined && h.startsWith('model no')){
+      colmap.desc = idx;
+    } else if(colmap.model === undefined && h === 'model'){
+      colmap.model = idx;
+    } else if(colmap.dp === undefined && h.startsWith('dp')){
+      colmap.dp = idx;
+    } else if(colmap.mrp === undefined && h.startsWith('mrp')){
+      colmap.mrp = idx;
+    } else if(colmap.dp === undefined && (h === 'price' || h.startsWith('price'))){
+      colmap.dp = idx;
+    } else if(colmap.web === undefined && (h.startsWith('web') || h.includes('sp-dp'))){
+      colmap.web = idx;
+    } else if(colmap.warranty === undefined && h.includes('warrant')){
+      colmap.warranty = idx;
+    } else if(colmap.status === undefined && (h.includes('status') || h.includes('availability'))){
+      colmap.status = idx;
+    } else if(colmap.link === undefined && (h.includes('link') || h.includes('website'))){
+      colmap.link = idx;
+    } else if(colmap.part === undefined && (h.includes('part number') || h.includes('part no'))){
+      colmap.part = idx;
+    } else if(colmap.cat === undefined && ['category','catagory','series','group'].includes(h)){
+      colmap.cat = idx;
+    }
+  });
+  return colmap;
+}
+
+function findHeaderRow(rows){
+  const maxScan = Math.min(rows.length, 15);
+  for(let i=0; i<maxScan; i++){
+    const cells = (rows[i] || []).map(normHeader);
+    const hasDp = cells.some(c => c.startsWith('dp') || c === 'price' || c.startsWith('price'));
+    const hasName = cells.some(c => (c.includes('name') && !c.includes('brand')) || c.includes('description') || c.includes('product head') || ['model','model no.','model no'].includes(c.trim()));
+    if(hasDp && hasName) return i;
+  }
+  return -1;
+}
+
+function extractCode(name){
+  if(!name) return null;
+  let m = name.match(/\[([A-Za-z0-9\-\._\/]+)\]/);
+  if(m) return m[1].trim().toUpperCase();
+  m = name.trim().match(/\(([A-Za-z0-9\-\._\/]{4,})\)$/);
+  if(m) return m[1].trim().toUpperCase();
+  m = name.trim().match(/#([A-Za-z0-9\-\._\/]{4,})$/);
+  if(m) return m[1].trim().toUpperCase();
+  return null;
+}
+
+function parsePriceWorkbook(wb){
+  const items = [];
+  wb.SheetNames.forEach(sheetName => {
+    if(sheetName.trim().toLowerCase() === 'index') return;
+    const ws = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
+    const hidx = findHeaderRow(rows);
+    if(hidx === -1) return;
+    const colmap = classifyHeader(rows[hidx]);
+    const nameCol = colmap.name !== undefined ? colmap.name : (colmap.desc !== undefined ? colmap.desc : colmap.model);
+    const dpCol = colmap.dp;
+    if(nameCol === undefined || dpCol === undefined) return;
+
+    let curCat = null;
+    for(let ri = hidx+1; ri < rows.length; ri++){
+      const r = rows[ri] || [];
+      if(colmap.cat !== undefined && r[colmap.cat] !== null && r[colmap.cat] !== undefined){
+        curCat = r[colmap.cat];
+      }
+      const nameVal = r[nameCol];
+      const descVal = colmap.desc !== undefined ? r[colmap.desc] : null;
+      const productName = descVal || nameVal;
+      const dpVal = r[dpCol];
+
+      if(productName === null || productName === undefined) continue;
+
+      if(!isNum(dpVal)){
+        if(typeof productName === 'string' && colmap.cat === undefined){
+          curCat = productName;
+        }
+        continue;
+      }
+
+      const mrpVal = colmap.mrp !== undefined ? r[colmap.mrp] : null;
+      const webVal = colmap.web !== undefined ? r[colmap.web] : null;
+      const warrantyVal = colmap.warranty !== undefined ? r[colmap.warranty] : null;
+      const statusVal = colmap.status !== undefined ? r[colmap.status] : null;
+      let partVal = colmap.part !== undefined ? r[colmap.part] : null;
+      if(!partVal && colmap.model !== undefined && colmap.desc !== undefined){
+        partVal = r[colmap.model];
+      }
+
+      const nameStr = String(productName).trim();
+      const code = extractCode(nameStr) || (partVal ? String(partVal).trim().toUpperCase() : null);
+
+      items.push({
+        name: nameStr,
+        brand: sheetName,
+        category: curCat,
+        dp: dpVal,
+        mrp: isNum(mrpVal) ? mrpVal : null,
+        web: isNum(webVal) ? webVal : null,
+        warranty: warrantyVal ? String(warrantyVal).trim() : null,
+        status: statusVal ? String(statusVal).trim() : null,
+        code: code
+      });
+    }
+  });
+  return items;
+}
+
+function normName(n){
+  return n.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function mergeStockIntoProducts(stockItems){
+  const byCode = {};
+  const byName = {};
+  PRODUCTS.forEach(p => {
+    const code = extractCode(p.name);
+    if(code){
+      byCode[code] = byCode[code] ? [...byCode[code], p] : [p];
+    }
+    const nn = normName(p.name);
+    byName[nn] = byName[nn] ? [...byName[nn], p] : [p];
+  });
+
+  const extras = [];
+  stockItems.forEach(si => {
+    const code = extractCode(si.name);
+    let target = null;
+    if(code && byCode[code] && byCode[code].length === 1){
+      target = byCode[code][0];
+    }
+    if(!target){
+      const nn = normName(si.name);
+      if(byName[nn] && byName[nn].length === 1){
+        target = byName[nn][0];
+      }
+    }
+    if(target){
+      target.total = si.total;
+      target.warehouses = si.warehouses;
+      target.group = si.group;
+      target.category = target.category || si.category;
+      if(!target.brand) target.brand = si.brand;
+    } else {
+      extras.push(si);
+    }
+  });
+  PRODUCTS = PRODUCTS.concat(extras);
+}
+
+function mergePriceIntoProducts(priceItems){
+  const byCode = {};
+  const byName = {};
+  PRODUCTS.forEach(p => {
+    const code = extractCode(p.name);
+    if(code){
+      byCode[code] = byCode[code] ? [...byCode[code], p] : [p];
+    }
+    const nn = normName(p.name);
+    byName[nn] = byName[nn] ? [...byName[nn], p] : [p];
+  });
+
+  const extras = [];
+  priceItems.forEach(pi => {
+    let target = null;
+    if(pi.code && byCode[pi.code] && byCode[pi.code].length === 1){
+      target = byCode[pi.code][0];
+    }
+    if(!target){
+      const nn = normName(pi.name);
+      if(byName[nn] && byName[nn].length === 1){
+        target = byName[nn][0];
+      }
+    }
+    if(target){
+      target.dp = pi.dp;
+      target.mrp = pi.mrp;
+      target.web = pi.web;
+      target.warranty = pi.warranty;
+      target.status = pi.status;
+      target.priceBrand = pi.brand;
+      if(!target.brand) target.brand = pi.brand;
+      if(!target.category) target.category = pi.category;
+    } else {
+      extras.push({
+        name: pi.name,
+        total: null,
+        group: null,
+        category: pi.category,
+        brand: pi.brand,
+        warehouses: {},
+        dp: pi.dp, mrp: pi.mrp, web: pi.web,
+        warranty: pi.warranty, status: pi.status, priceBrand: pi.brand
+      });
+    }
+  });
+  PRODUCTS = PRODUCTS.concat(extras);
+}
+
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    try{
+      const data = new Uint8Array(evt.target.result);
+      const wb = XLSX.read(data, { type: 'array', cellDates: false });
+      const stockItems = parseStockWorkbook(wb);
+      if(stockItems.length === 0){
+        alert('ফাইল থেকে কোনো প্রোডাক্ট পাওয়া যায়নি — ফাইল ফরম্যাট চেক করুন।');
+        return;
+      }
+      mergeStockIntoProducts(stockItems);
+      updateDbLabel();
+      searchInput.value = '';
+      render('');
+    } catch(err){
+      alert('ফাইল পড়তে সমস্যা হয়েছে: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+priceFileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    try{
+      const data = new Uint8Array(evt.target.result);
+      const wb = XLSX.read(data, { type: 'array', cellDates: false });
+      const priceItems = parsePriceWorkbook(wb);
+      if(priceItems.length === 0){
+        alert('প্রাইস ফাইল থেকে কোনো প্রোডাক্ট পাওয়া যায়নি — ফাইল ফরম্যাট চেক করুন।');
+        return;
+      }
+      mergePriceIntoProducts(priceItems);
+      updateDbLabel();
+      searchInput.value = '';
+      render('');
+    } catch(err){
+      alert('ফাইল পড়তে সমস্যা হয়েছে: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+let clearArmed = false;
+let clearArmTimer = null;
+const clearDataBtnDefaultText = clearDataBtn.textContent;
+
+function doClearAllData(){
+  PRODUCTS = [];
+  try{ fileInput.value = ''; }catch(e){}
+  try{ priceFileInput.value = ''; }catch(e){}
+  searchInput.value = '';
+  updateDbLabel();
+  render('');
+}
+
+clearDataBtn.addEventListener('click', () => {
+  if(PRODUCTS.length === 0 && !clearArmed){
+    clearDataBtn.textContent = 'মুছে ফেলার মতো কোনো ডাটা নেই';
+    if(clearArmTimer) clearTimeout(clearArmTimer);
+    clearArmTimer = setTimeout(() => {
+      clearDataBtn.textContent = clearDataBtnDefaultText;
+    }, 1800);
+    return;
+  }
+  if(!clearArmed){
+    clearArmed = true;
+    clearDataBtn.textContent = 'নিশ্চিত করতে আবার ক্লিক করুন';
+    if(clearArmTimer) clearTimeout(clearArmTimer);
+    clearArmTimer = setTimeout(() => {
+      clearArmed = false;
+      clearDataBtn.textContent = clearDataBtnDefaultText;
+    }, 4000);
+    return;
+  }
+  clearArmed = false;
+  if(clearArmTimer) clearTimeout(clearArmTimer);
+  clearDataBtn.textContent = clearDataBtnDefaultText;
+  doClearAllData();
+});
+
+// ---- Lock / load encrypted data.json ----
+let ENC = null;
+const pwInput=document.getElementById('pwInput'), pwMsg=document.getElementById('pwMsg'), lockEl=document.getElementById('lock');
+async function tryUnlock(pw, silent){
+  try{
+    if(!ENC){ const r=await fetch('data.json?'+Date.now()); ENC=await r.json(); }
+    PRODUCTS = await decryptData(ENC, pw);
+    CUR_PW = pw;
+    try{ localStorage.setItem('sf_pw', pw); }catch(e){}
+    lockEl.style.display='none';
+    updateDbLabel(); render('');
+    return true;
+  }catch(e){
+    if(!silent) pwMsg.textContent = 'পাসওয়ার্ড ভুল, বা data.json লোড হয়নি';
+    return false;
+  }
+}
+document.getElementById('pwBtn').addEventListener('click', ()=> tryUnlock(pwInput.value, false));
+pwInput.addEventListener('keydown', e=>{ if(e.key==='Enter') tryUnlock(pwInput.value, false); });
+(async()=>{ let s=null; try{ s=localStorage.getItem('sf_pw'); }catch(e){} if(s){ const ok=await tryUnlock(s,true); if(!ok){ try{localStorage.removeItem('sf_pw');}catch(e){} } } })();
+
+document.getElementById('exportBtn').addEventListener('click', async ()=>{
+  const pw = prompt('data.json এর জন্য পাসওয়ার্ড দিন (টিমকে এটাই দিতে হবে):', CUR_PW);
+  if(!pw) return;
+  const obj = await encryptData(PRODUCTS, pw);
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(obj)],{type:'application/json'}));
+  a.download='data.json'; a.click();
+});
+</script>
+</body>
+</html>
